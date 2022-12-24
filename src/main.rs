@@ -23,10 +23,6 @@ fn main() {
         }
     }
 
-    for sig in signeture.iter() {
-        println!("{}, {}", sig.0, sig.1);
-    }
-
     let target_path = Path::new("./eicar_example");
     let target_file = File::open(target_path).unwrap();
     let target = unsafe { Mmap::map(&target_file).unwrap() };
@@ -37,4 +33,12 @@ fn main() {
         target_pattern.push_str(&format!("{:x}", b));
     }
     println!("pattern: {}", target_pattern);
+
+    signeture.insert("this is test.".to_string(), "54f21".to_string());
+    for sig in signeture.iter() {
+        let re_sig = Regex::new(sig.1).unwrap();
+        if re_sig.is_match(&target_pattern) {
+            println!("{} found.", sig.0);
+        }
+    }
 }
