@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 home = "0.5.4"
 regex = "1.7.0"
+memmap2 = "0.5.8"
