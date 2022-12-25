@@ -34,7 +34,6 @@ fn main() {
     }
     println!("pattern: {}", target_pattern);
 
-    signeture.insert("this is test.".to_string(), "54f21".to_string());
     let re_sig = RegexSetBuilder::new(signeture.values())
         .unicode(false)
         .size_limit(std::usize::MAX)
