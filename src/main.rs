@@ -5,7 +5,7 @@ use std::io::BufReader;
 use std::path::Path;
 
 use memmap2::Mmap;
-use regex::Regex;
+use regex::{Regex, RegexSetBuilder};
 
 fn main() {
     let mut db_path = home::home_dir().unwrap();
@@ -14,7 +14,7 @@ fn main() {
     let reader = BufReader::new(database);
 
     let mut signeture: HashMap<String, String> = HashMap::new();
-    let re = Regex::new(r"[*?{|]").unwrap();
+    let re = Regex::new(r"[^0-9a-f]").unwrap();
 
     for line in reader.lines() {
         let properties: Vec<String> = line.unwrap().split(':').map(|x| x.to_string()).collect();
@@ -35,10 +35,31 @@ fn main() {
     println!("pattern: {}", target_pattern);
 
     signeture.insert("this is test.".to_string(), "54f21".to_string());
-    for sig in signeture.iter() {
-        let re_sig = Regex::new(sig.1).unwrap();
-        if re_sig.is_match(&target_pattern) {
-            println!("{} found.", sig.0);
+    let re_sig = RegexSetBuilder::new(signeture.values())
+        .unicode(false)
+        .size_limit(std::usize::MAX)
+        .build()
+        .unwrap();
+
+    let matched: Vec<_> = re_sig
+        .matches(&target_pattern)
+        .into_iter()
+        .map(|index| &re_sig.patterns()[index])
+        .collect();
+    for m in matched {
+        for sig in signeture.iter() {
+            if sig.1 == m {
+                println!("{} found", sig.0)
+            }
         }
+        /*
+        println!(
+            "{} found.",
+            signeture
+                .iter()
+                .find_map(|(k, v)| if v == m { Some(k) } else { None })
+                .unwrap_or(&String::new())
+        );
+        */
     }
 }
