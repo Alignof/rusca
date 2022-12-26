@@ -7,7 +7,7 @@ use std::io::BufReader;
 
 use cmdline::Arguments;
 use memmap2::Mmap;
-use regex::{Regex, RegexSetBuilder};
+use regex::{Regex, RegexSet, RegexSetBuilder};
 
 fn get_signeture<R>(reader: BufReader<R>) -> HashMap<String, String>
 where
@@ -34,6 +34,14 @@ fn get_target_pattern(target_path: &str) -> String {
     target_pattern
 }
 
+fn matching(re_sig: &RegexSet, target_pattern: String) -> Vec<&String> {
+    re_sig
+        .matches(&target_pattern)
+        .into_iter()
+        .map(|index| &re_sig.patterns()[index])
+        .collect()
+}
+
 fn main() {
     let args = Arguments::new();
     let database = File::open(args.database).unwrap();
@@ -48,12 +56,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let matched: Vec<_> = re_sig
-        .matches(&target_pattern)
-        .into_iter()
-        .map(|index| &re_sig.patterns()[index])
-        .collect();
-
+    let matched = matching(&re_sig, target_pattern);
     for m in matched {
         println!(
             "{} found.",
