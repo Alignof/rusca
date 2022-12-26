@@ -1,21 +1,20 @@
+mod cmdline;
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::Path;
 
+use cmdline::Arguments;
 use memmap2::Mmap;
 use regex::{Regex, RegexSetBuilder};
 
-fn main() {
-    let mut db_path = home::home_dir().unwrap();
-    db_path.push("tmp/ClamavDatabase/main.ndb");
-    let database = File::open(db_path.as_path()).unwrap();
-    let reader = BufReader::new(database);
-
+fn get_signeture<R>(reader: BufReader<R>) -> HashMap<String, String>
+where
+    R: std::io::Read,
+{
     let mut signeture: HashMap<String, String> = HashMap::new();
     let re = Regex::new(r"[^0-9a-f]").unwrap();
-
     for line in reader.lines() {
         let properties: Vec<String> = line.unwrap().split(':').map(|x| x.to_string()).collect();
         if !re.is_match(&properties[3]) {
@@ -23,16 +22,25 @@ fn main() {
         }
     }
 
-    let target_path = Path::new("./eicar_example");
+    signeture
+}
+
+fn get_target_pattern(target_path: &str) -> String {
     let target_file = File::open(target_path).unwrap();
     let target = unsafe { Mmap::map(&target_file).unwrap() };
-
-    // let target_pattern: String = target.iter().map(|x| format!("{:x}", x)).collect();
-    let mut target_pattern = String::new();
-    for b in target.iter() {
-        target_pattern.push_str(&format!("{:x}", b));
-    }
+    let target_pattern: String = target.iter().map(|x| format!("{:x}", x)).collect();
     println!("pattern: {}", target_pattern);
+
+    target_pattern
+}
+
+fn main() {
+    let args = Arguments::new();
+    let database = File::open(args.database).unwrap();
+    let reader = BufReader::new(database);
+    let signeture = get_signeture(reader);
+
+    let target_pattern = get_target_pattern(&args.target);
 
     let re_sig = RegexSetBuilder::new(signeture.values())
         .unicode(false)
@@ -45,13 +53,8 @@ fn main() {
         .into_iter()
         .map(|index| &re_sig.patterns()[index])
         .collect();
+
     for m in matched {
-        for sig in signeture.iter() {
-            if sig.1 == m {
-                println!("{} found", sig.0)
-            }
-        }
-        /*
         println!(
             "{} found.",
             signeture
@@ -59,6 +62,5 @@ fn main() {
                 .find_map(|(k, v)| if v == m { Some(k) } else { None })
                 .unwrap_or(&String::new())
         );
-        */
     }
 }
