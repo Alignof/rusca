@@ -28,7 +28,8 @@ where
 fn get_target_pattern(target_path: &str) -> String {
     let target_file = File::open(target_path).unwrap();
     let target = unsafe { Mmap::map(&target_file).unwrap() };
-    let target_pattern: String = target.iter().map(|x| format!("{:x}", x)).collect();
+    let target_pattern: String = target.iter().map(|x| format!("{:02x}", x)).collect();
+    println!("filename: {}", target_path);
     println!("pattern: {}", target_pattern);
 
     target_pattern
@@ -48,23 +49,29 @@ fn main() {
     let reader = BufReader::new(database);
     let signeture = get_signeture(reader);
 
-    let target_pattern = get_target_pattern(&args.target);
-
     let re_sig = RegexSetBuilder::new(signeture.values())
         .unicode(false)
         .size_limit(std::usize::MAX)
         .build()
         .unwrap();
 
-    let matched = matching(&re_sig, target_pattern);
-    for m in matched {
-        println!(
-            "{} found.",
-            signeture
-                .iter()
-                .find_map(|(k, v)| if v == m { Some(k) } else { None })
-                .unwrap_or(&String::new())
-        );
+    for target in args.targets {
+        let target_pattern = get_target_pattern(&target);
+        let matched = matching(&re_sig, target_pattern);
+
+        if matched.is_empty() {
+            println!("not found.\n");
+        } else {
+            for m in matched {
+                println!(
+                    "{} found.\n",
+                    signeture
+                        .iter()
+                        .find_map(|(k, v)| if v == m { Some(k) } else { None })
+                        .unwrap_or(&String::new())
+                );
+            }
+        }
     }
 }
 
